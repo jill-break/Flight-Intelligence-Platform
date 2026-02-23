@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Docker
+.docker/
+logs/
+airflow/logs/
+
+# Data & Databases
+data/*
+!data/.gitkeep
+postgres_airflow_data/
+postgres_analytics_data/
+mysql_staging_data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
