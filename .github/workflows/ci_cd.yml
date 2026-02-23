@@ -46,7 +46,7 @@ jobs:
       # 5. Run test suite
       - name: Run tests with pytest
         run: |
-          python -m pytest tests/ -v --tb=short
+          python -m pytest tests/ -v --tb=short -W ignore::DeprecationWarning
 
   # ─────────────────────────────────────────────
   # Job 2 — Docker Build Validation
