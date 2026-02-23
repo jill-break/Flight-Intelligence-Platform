@@ -17,3 +17,9 @@ mysql_staging_data/
 __pycache__/
 *.py[cod]
 .venv/
+spark/__init__.py
+spark/schemas/__init__.py
+spark/jobs/__init__.py
+scripts/__init__.py
+airflow/__init__.py
+airflow/dags/__init__.py
