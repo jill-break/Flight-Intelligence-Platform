@@ -9,6 +9,8 @@ import os
 import sys
 # Import your schema (ensure the path is in your PYTHONPATH)
 from spark.schemas.flight_schema import FlightSchema
+# For SparkSubmitOperator, if needed in future steps
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 default_args = {
     'owner': 'senior_de',
@@ -75,4 +77,22 @@ with DAG('flight_data_ingestion',
         python_callable=validate_flight_data
     )
 
-    wait_for_file >> validate_data
+    # 3. Spark Processing Task
+    process_validated_data = SparkSubmitOperator(
+        task_id='process_flight_data_spark',
+        application='/opt/airflow/spark/jobs/process_flights.py',
+        conn_id='spark_default',
+        # Point directly to the JAR in the mounted volume
+        jars='/opt/airflow/spark/jars/postgresql-42.7.2.jar', 
+        packages="org.apache.hadoop:hadoop-aws:3.3.4",
+        conf={
+            "spark.hadoop.fs.s3a.endpoint": "http://minio_storage:9000",
+            "spark.hadoop.fs.s3a.access.key": "minio_admin",
+            "spark.hadoop.fs.s3a.secret.key": "minio_password_321",
+            "spark.hadoop.fs.s3a.path.style.access": "true",
+            "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+        },
+        verbose=True
+    )
+
+    wait_for_file >> validate_data >> process_validated_data
