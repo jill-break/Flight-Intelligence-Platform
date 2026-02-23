@@ -68,6 +68,8 @@ services:
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+    volumes:
+      - ./spark/jars:/opt/airflow/spark/jars
     networks:
       - data_platform_net
 
@@ -95,6 +97,9 @@ services:
       - "8081:8080"
       - "7077:7077"
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    volumes:
+      - ./spark/jars:/opt/spark/jars
+      - ./spark/jobs:/opt/spark/jobs
     networks:
       - data_platform_net
 
@@ -110,6 +115,8 @@ services:
     depends_on:
       - spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    volumes:
+      - ./spark/jars:/opt/spark/jars
     networks:
       - data_platform_net
 
