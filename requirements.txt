@@ -4,3 +4,4 @@ psycopg2-binary
 pandas
 pytest
 numpy 
+apache-airflow-providers-amazon
