@@ -10,11 +10,12 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_airflow:5432/airflow_metadata
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__WEBSERVER__SESSION_BACKEND: securecookie
-    PYTHONPATH: /opt/airflow/include
+    PYTHONPATH: /opt/airflow/
   volumes:
-    - ./dags:/opt/airflow/dags
+    - ./airflow/dags:/opt/airflow/dags
     - ./include:/opt/airflow/include
     - ./requirements.txt:/opt/airflow/requirements.txt
+    - ./spark:/opt/airflow/spark
   networks:
     - data_platform_net
 
