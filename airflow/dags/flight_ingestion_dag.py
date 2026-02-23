@@ -83,9 +83,11 @@ with DAG('flight_data_ingestion',
         application='/opt/airflow/spark/jobs/process_flights.py',
         conn_id='spark_default',
         # Point directly to the JAR in the mounted volume
-        jars='/opt/airflow/spark/jars/postgresql-42.7.2.jar', 
+        jars='/opt/airflow/spark/jars/postgresql-42.7.6.jar', 
         packages="org.apache.hadoop:hadoop-aws:3.3.4",
         conf={
+            "spark.driver.host": "airflow-scheduler",
+            "spark.driver.bindAddress": "0.0.0.0",
             "spark.hadoop.fs.s3a.endpoint": "http://minio_storage:9000",
             "spark.hadoop.fs.s3a.access.key": "minio_admin",
             "spark.hadoop.fs.s3a.secret.key": "minio_password_321",
