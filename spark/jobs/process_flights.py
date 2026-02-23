@@ -10,7 +10,6 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY")) \
     .config("spark.hadoop.fs.s3a.path.style.access", True) \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-    .get_builder() \
     .getOrCreate()
 
 # 1. READ: Pull validated data from MinIO
@@ -25,14 +24,14 @@ processed_df = df.withColumn("transaction_id", sha2(col("transaction_id"), 256))
                  .withColumn("priority_flight", when(col("passenger_count") > 250, "HIGH").otherwise("NORMAL"))
 
 # 3. WRITE: Load into the Analytics Warehouse (Postgres)
-# Note: In Docker, use the container name 'postgres_analytics'
-db_url = "jdbc:postgresql://postgres_analytics:5432/psql_db"
+# Write to the dedicated analytics DB, not the Airflow metadata DB
+db_url = "jdbc:postgresql://postgres_analytics:5432/retail_db"
 db_properties = {
-    "user": "psql_user",
-    "password": "psql_pass",
+    "user": os.getenv("POSTGRES_USER", "warehouse_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD", "secure_password_789"),
     "driver": "org.postgresql.Driver"
 }
 
-processed_df.write.jdbc(url=db_url, table="gold_flights", mode="append", properties=db_properties)
+processed_df.write.jdbc(url=db_url, table="flight_analytics.gold_flights", mode="overwrite", properties=db_properties)
 
 print("Transformation and Load to Postgres complete.")

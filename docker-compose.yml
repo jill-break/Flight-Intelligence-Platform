@@ -68,6 +68,10 @@ services:
       airflow-init:
         condition: service_completed_successfully
     volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./include:/opt/airflow/include
+      - ./requirements.txt:/opt/airflow/requirements.txt
+      - ./spark:/opt/airflow/spark
       - ./spark/jars:/opt/airflow/spark/jars
     networks:
       - data_platform_net
