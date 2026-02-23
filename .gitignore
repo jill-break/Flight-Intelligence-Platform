@@ -23,3 +23,4 @@ spark/jobs/__init__.py
 scripts/__init__.py
 airflow/__init__.py
 airflow/dags/__init__.py
+.pytest_cache
