@@ -28,7 +28,9 @@ def generate_flight_data(records=100):
     return df
 
 if __name__ == "__main__":
-    df = generate_flight_data(50)
+    import sys
+    count = int(sys.argv[1]) if len(sys.argv) > 1 else 50
+    df = generate_flight_data(count)
     os.makedirs('data', exist_ok=True)
     filename = f"data/flights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     df.to_csv(filename, index=False)
