@@ -1,15 +1,18 @@
 """
-Flight ETL Pipeline DAG — Production-Ready
-============================================
-Automated pipeline: Ingest → Validate (Pandera) → Transform (Spark) → Archive
+Flight Analytics Pipeline DAG — Processing Engine
+====================================================
+Waits for files in MinIO → Validates with Pandera → Transforms with Spark → Archives
+
+This DAG is DECOUPLED from ingestion — it only processes files already in MinIO.
+Files arrive via the raw_ingestion_pipeline DAG (local uploads) or other sources.
 
 Task flow:
   wait_for_file → validate_with_pandera → process_flight_data_spark → archive_processed_files
 
 Data Quality Gate:
-  - Pandera validates every CSV against FlightSchema
-  - If ANY file fails validation → DAG fails, Spark never runs
-  - Bad files are quarantined to `quarantine/` in MinIO
+  - Pandera validates every CSV against FlightSchema (lazy=True)
+  - If ANY file fails → DAG fails, Spark never runs
+  - Bad files are quarantined to quarantine/ in MinIO
 """
 
 from airflow import DAG
@@ -43,7 +46,7 @@ BUCKET = 'raw-data'
 
 
 # ──────────────────────────────────────────────
-# Task 3.2: Data Quality Gate
+# Task: Data Quality Gate (Pandera)
 # ──────────────────────────────────────────────
 def validate_flight_data(**kwargs):
     """
@@ -107,12 +110,12 @@ def validate_flight_data(**kwargs):
 
 
 # ──────────────────────────────────────────────
-# Task 3.1: Automated Archive Cleanup
+# Task: Automated Archive Cleanup
 # ──────────────────────────────────────────────
 def archive_processed_files(**kwargs):
     """
     Move files from validated/ to archived/{date}/ after Spark processes them.
-    This prevents files from being reprocessed on the next DAG run.
+    Prevents files from being reprocessed on the next DAG run.
     """
     s3_hook = S3Hook(aws_conn_id=MINIO_CONN_ID)
     today = datetime.now().strftime('%Y-%m-%d')
@@ -144,12 +147,12 @@ def archive_processed_files(**kwargs):
 # DAG Definition
 # ──────────────────────────────────────────────
 with DAG(
-    'flight_etl_pipeline',
+    'flight_analytics_pipeline',
     default_args=default_args,
-    description='Production ETL: Ingest → Validate → Transform → Archive',
+    description='Processing Engine: Validate → Spark Transform → Archive',
     schedule_interval='@hourly',
     catchup=False,
-    tags=['etl', 'production', 'flight-data'],
+    tags=['analytics', 'processing', 'flight-data'],
 ) as dag:
 
     # 1. Wait for new flight data in MinIO

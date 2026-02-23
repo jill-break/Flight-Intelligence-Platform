@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 import uuid
 
-def generate_flight_data(records=100):
+def generate_flight_data(records=100, inject_dirty=True):
     airports = ['ACC', 'LHR', 'JFK', 'DXB', 'NRT']
     airlines = ['Ghana Airways', 'British Airways', 'Delta', 'Emirates', 'JAL']
     
@@ -23,15 +23,39 @@ def generate_flight_data(records=100):
     df = pd.DataFrame(data)
     
     # Introduce "Dirty Data" for testing (5% of records have negative fuel)
-    df.loc[df.sample(frac=0.05).index, 'fuel_level_percentage'] = -10.0
+    if inject_dirty:
+        df.loc[df.sample(frac=0.05).index, 'fuel_level_percentage'] = -10.0
     
     return df
 
 if __name__ == "__main__":
     import sys
+    import time
+
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 50
-    df = generate_flight_data(count)
+    interval = int(sys.argv[2]) if len(sys.argv) > 2 else 30  # seconds
     os.makedirs('data', exist_ok=True)
-    filename = f"data/flights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    df.to_csv(filename, index=False)
-    print(f"Generated {len(df)} records at {filename}")
+
+    print(f"✈️  Flight Generator started — {count} records every {interval}s")
+    print(f"   Output: data/flights_*.csv")
+    print(f"   Press Ctrl+C to stop\n")
+
+    batch = 0
+    CLEAN_COUNT = 10  # batches of clean data
+    DIRTY_COUNT = 2   # batches of dirty data
+    cycle_length = CLEAN_COUNT + DIRTY_COUNT  # 12 batches per cycle
+
+    while True:
+        batch += 1
+        position = batch % cycle_length  # 1-12, then repeats
+
+        # Batches 1-10 are clean, 11-12 are dirty
+        inject_dirty = position > CLEAN_COUNT or position == 0
+        label = "DIRTY" if inject_dirty else "CLEAN"
+
+        df = generate_flight_data(count, inject_dirty=inject_dirty)
+        filename = f"data/flights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        df.to_csv(filename, index=False)
+        dirty = len(df[df['fuel_level_percentage'] < 0])
+        print(f"[Batch {batch}] [{label}] {len(df)} records ({dirty} dirty) -> {filename}")
+        time.sleep(interval)
