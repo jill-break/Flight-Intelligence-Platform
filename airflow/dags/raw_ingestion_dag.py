@@ -7,7 +7,7 @@ them to MinIO's raw-data bucket. Deletes the local copy after upload.
 This DAG is DECOUPLED from processing — it only moves files.
 The flight_analytics_pipeline DAG handles validation and transformation.
 
-Schedule: Every 5 minutes
+Schedule: Every 2 minutes
 """
 
 from airflow import DAG
@@ -17,6 +17,9 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from datetime import datetime, timedelta
 import glob
 import os
+import logging
+
+logger = logging.getLogger('raw_ingestion_dag')
 
 default_args = {
     'owner': 'senior_de',
@@ -34,7 +37,9 @@ LOCAL_DATA_DIR = '/opt/airflow/data'
 
 def check_for_files():
     """Return True if any flights_*.csv exist in the data folder."""
-    return len(glob.glob(os.path.join(LOCAL_DATA_DIR, 'flights_*.csv'))) > 0
+    files = glob.glob(os.path.join(LOCAL_DATA_DIR, 'flights_*.csv'))
+    logger.info(f"Scanning {LOCAL_DATA_DIR} — found {len(files)} CSV file(s)")
+    return len(files) > 0
 
 
 def upload_files_to_minio(**kwargs):
@@ -46,13 +51,13 @@ def upload_files_to_minio(**kwargs):
 
     csv_files = glob.glob(os.path.join(LOCAL_DATA_DIR, 'flights_*.csv'))
     if not csv_files:
-        print("No new CSV files found in data/ folder.")
+        logger.warning("No new CSV files found in data/ folder.")
         return
 
     uploaded = 0
     for filepath in csv_files:
         filename = os.path.basename(filepath)
-        print(f"Uploading {filename} to MinIO...")
+        logger.info(f"Uploading {filename} to MinIO bucket '{BUCKET}'...")
 
         s3_hook.load_file(
             filename=filepath,
@@ -64,9 +69,9 @@ def upload_files_to_minio(**kwargs):
         # Delete local copy after successful upload
         os.remove(filepath)
         uploaded += 1
-        print(f"Uploaded and removed local copy: {filename}")
+        logger.info(f"Uploaded and removed local copy: {filename}")
 
-    print(f"Ingestion complete: {uploaded} file(s) uploaded to MinIO.")
+    logger.info(f"Ingestion complete: {uploaded} file(s) uploaded to MinIO.")
 
 
 with DAG(

@@ -1,17 +1,17 @@
 """
 Flight Analytics Pipeline DAG — Processing Engine
 ====================================================
-Waits for files in MinIO → Validates with Pandera → Transforms with Spark → Archives
+Waits for files in MinIO -> Validates with Pandera -> Transforms with Spark -> Archives
 
 This DAG is DECOUPLED from ingestion — it only processes files already in MinIO.
 Files arrive via the raw_ingestion_pipeline DAG (local uploads) or other sources.
 
 Task flow:
-  wait_for_file → validate_with_pandera → process_flight_data_spark → archive_processed_files
+  wait_for_file -> validate_with_pandera -> process_flight_data_spark -> archive_processed_files
 
 Data Quality Gate:
   - Pandera validates every CSV against FlightSchema (lazy=True)
-  - If ANY file fails → DAG fails, Spark never runs
+  - If ANY file fails -> DAG fails, Spark never runs
   - Bad files are quarantined to quarantine/ in MinIO
 """
 
@@ -25,8 +25,11 @@ from datetime import datetime, timedelta
 import pandas as pd
 import pandera
 import io
+import logging
 
 from spark.schemas.flight_schema import FlightSchema
+
+logger = logging.getLogger('flight_analytics_pipeline')
 
 # ──────────────────────────────────────────────
 # Default Args
@@ -51,16 +54,18 @@ BUCKET = 'raw-data'
 def validate_flight_data(**kwargs):
     """
     Validate all new CSVs against the Pandera FlightSchema.
-    - Valid files   → moved to validated/
-    - Invalid files → moved to quarantine/
-    - If ANY file fails → raise AirflowFailException to block Spark
+    - Valid files   -> moved to validated/
+    - Invalid files -> moved to quarantine/
+    - If ANY file fails -> raise AirflowFailException to block Spark
     """
     s3_hook = S3Hook(aws_conn_id=MINIO_CONN_ID)
 
     keys = s3_hook.list_keys(bucket_name=BUCKET, prefix='flights_')
     if not keys:
-        print("No new files to validate.")
+        logger.warning("No new files to validate.")
         return
+
+    logger.info(f"Found {len(keys)} file(s) to validate against FlightSchema")
 
     failed_files = []
     validated_files = []
@@ -73,7 +78,7 @@ def validate_flight_data(**kwargs):
         try:
             # lazy=True collects ALL schema errors before raising
             FlightSchema.validate(df, lazy=True)
-            print(f"✅ Validation PASSED: {key}")
+            logger.info(f"PASSED validation: {key} ({len(df)} records)")
 
             # Move to validated/
             new_key = f"validated/{key.split('/')[-1]}"
@@ -86,8 +91,8 @@ def validate_flight_data(**kwargs):
 
         except pandera.errors.SchemaErrors as e:
             error_count = len(e.failure_cases)
-            print(f"❌ Validation FAILED: {key} — {error_count} errors found")
-            print(e.failure_cases.to_string())
+            logger.error(f"FAILED validation: {key} — {error_count} errors found")
+            logger.error(f"Failure details:\n{e.failure_cases.to_string()}")
 
             # Quarantine bad data
             new_key = f"quarantine/{key.split('/')[-1]}"
@@ -100,13 +105,17 @@ def validate_flight_data(**kwargs):
 
     # DATA QUALITY GATE: Block downstream tasks if any file failed
     if failed_files:
+        logger.critical(
+            f"Data quality gate BLOCKED pipeline. "
+            f"{len(failed_files)} file(s) quarantined: {failed_files}"
+        )
         raise AirflowFailException(
             f"Data quality check FAILED. "
             f"{len(failed_files)} file(s) quarantined: {failed_files}. "
             f"Spark processing blocked."
         )
 
-    print(f"All {len(validated_files)} file(s) passed validation.")
+    logger.info(f"All {len(validated_files)} file(s) passed validation — pipeline may proceed.")
 
 
 # ──────────────────────────────────────────────
@@ -122,7 +131,7 @@ def archive_processed_files(**kwargs):
 
     keys = s3_hook.list_keys(bucket_name=BUCKET, prefix='validated/')
     if not keys:
-        print("No files to archive.")
+        logger.warning("No files to archive.")
         return
 
     archived_count = 0
@@ -138,9 +147,9 @@ def archive_processed_files(**kwargs):
         )
         s3_hook.delete_objects(BUCKET, key)
         archived_count += 1
-        print(f"📦 Archived: {key} → {archive_key}")
+        logger.info(f"Archived: {key} -> {archive_key}")
 
-    print(f"Archived {archived_count} file(s) to archived/{today}/")
+    logger.info(f"Archived {archived_count} file(s) to archived/{today}/")
 
 
 # ──────────────────────────────────────────────
@@ -149,7 +158,7 @@ def archive_processed_files(**kwargs):
 with DAG(
     'flight_analytics_pipeline',
     default_args=default_args,
-    description='Processing Engine: Validate → Spark Transform → Archive',
+    description='Processing Engine: Validate -> Spark Transform -> Archive',
     schedule_interval='@hourly',
     catchup=False,
     tags=['analytics', 'processing', 'flight-data'],

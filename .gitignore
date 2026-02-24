@@ -3,7 +3,8 @@
 
 # Docker
 .docker/
-logs/
+logs/*
+!logs/.gitkeep
 airflow/logs/
 
 # Data & Databases

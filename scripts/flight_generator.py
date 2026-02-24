@@ -2,7 +2,29 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
+import sys
 import uuid
+import logging
+
+# ──────────────────────────────────────────────
+# Logger Setup
+# ──────────────────────────────────────────────
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+logger = logging.getLogger('flight_generator')
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+file_handler = logging.FileHandler(os.path.join(LOG_DIR, 'flight_generator.log'), encoding='utf-8')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 
 def generate_flight_data(records=100, inject_dirty=True):
     airports = ['ACC', 'LHR', 'JFK', 'DXB', 'NRT']
@@ -24,12 +46,13 @@ def generate_flight_data(records=100, inject_dirty=True):
     
     # Introduce "Dirty Data" for testing (5% of records have negative fuel)
     if inject_dirty:
-        df.loc[df.sample(frac=0.05).index, 'fuel_level_percentage'] = -10.0
+        dirty_count = max(1, int(len(df) * 0.05))
+        df.loc[df.sample(n=dirty_count).index, 'fuel_level_percentage'] = -10.0
+        logger.debug(f"Injected {dirty_count} dirty records (negative fuel)")
     
     return df
 
 if __name__ == "__main__":
-    import sys
     import time
 
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 50
@@ -42,9 +65,9 @@ if __name__ == "__main__":
     cycle_length = CLEAN_COUNT + DIRTY_COUNT  # 12 batches per cycle
 
     if continuous:
-        print(f"✈️  Flight Generator started — {count} records every {interval}s")
-        print(f"   Output: data/flights_*.csv")
-        print(f"   Press Ctrl+C to stop\n")
+        logger.info(f"Flight Generator started — {count} records every {interval}s")
+        logger.info(f"Output directory: data/flights_*.csv")
+        logger.info("Press Ctrl+C to stop")
 
     batch = 0
     while True:
@@ -59,7 +82,11 @@ if __name__ == "__main__":
         filename = f"data/flights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         df.to_csv(filename, index=False)
         dirty = len(df[df['fuel_level_percentage'] < 0])
-        print(f"[Batch {batch}] [{label}] {len(df)} records ({dirty} dirty) -> {filename}")
+
+        if inject_dirty:
+            logger.warning(f"[Batch {batch}] [{label}] {len(df)} records ({dirty} dirty) -> {filename}")
+        else:
+            logger.info(f"[Batch {batch}] [{label}] {len(df)} records -> {filename}")
 
         if not continuous:
             break  # single run for CI/CD
