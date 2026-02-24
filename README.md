@@ -1,8 +1,7 @@
 # ✈️ Flight Intelligence Platform
 
-> **A production-grade, end-to-end data engineering platform** that ingests synthetic flight data, validates it against strict quality contracts, transforms it with Apache Spark, and serves analytical insights through Metabase dashboards — all orchestrated by Apache Airflow inside a fully containerized Docker environment.
+> **An end-to-end data engineering platform** that ingests synthetic flight data, validates it against strict quality contracts, transforms it with Apache Spark, and serves analytical insights through Metabase dashboards — all orchestrated by Apache Airflow inside a fully containerized Docker environment.
 
-![Project Status](https://img.shields.io/badge/Status-Production--Ready-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![Airflow](https://img.shields.io/badge/Airflow-2.8.1-orange)
 ![Spark](https://img.shields.io/badge/Spark-3.5.0-E25A1C)
@@ -11,9 +10,7 @@
 
 ---
 
-## 📸 Screenshots
-
-<!-- Replace these placeholders with actual screenshot paths -->
+## Screenshots
 
 ### Airflow DAG Overview
 
@@ -50,7 +47,7 @@
 
 ---
 
-## 🔧 Technology Stack
+## Technology Stack
 
 | Layer                | Technology           | Purpose                                                      |
 | -------------------- | -------------------- | ------------------------------------------------------------ |
@@ -66,7 +63,7 @@
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 Flight-Intelligence-Platform/
@@ -99,7 +96,7 @@ Flight-Intelligence-Platform/
 
 ---
 
-## 🚀 Pipeline Overview
+## Pipeline Overview
 
 The platform runs **two decoupled DAGs** that operate independently, connected only through MinIO as a shared data layer:
 
@@ -135,24 +132,6 @@ wait_for_flight_data → validate_with_pandera → process_flight_data_spark →
 
 ---
 
-## 🛡️ Data Quality Gate
-
-The platform enforces **strict data contracts** using Pandera before any data reaches Spark or Postgres. This prevents bad data from polluting the analytics warehouse.
-
-### Schema Contract (`FlightSchema`)
-
-```python
-class FlightSchema(pa.DataFrameModel):
-    transaction_id:       Series[str]   = pa.Field(unique=True)
-    flight_number:        Series[str]   = pa.Field(str_startswith="FL-")
-    airline:              Series[str]
-    origin:               Series[str]   = pa.Field(str_length=3)
-    destination:          Series[str]   = pa.Field(str_length=3)
-    departure_time:       Series[str]
-    passenger_count:      Series[int]   = pa.Field(ge=0, le=850)
-    fuel_level_percentage: Series[float] = pa.Field(ge=0.0, le=100.0)
-    is_delayed:           Series[bool]
-```
 
 **Validation behavior:**
 
@@ -163,7 +142,7 @@ class FlightSchema(pa.DataFrameModel):
 
 ---
 
-## ⚡ Spark Transformation
+## Spark Transformation
 
 The `process_flights.py` PySpark job applies cybersecurity and analytics transformations:
 
@@ -177,7 +156,7 @@ The transformed data is written to `flight_analytics.gold_flights` in PostgreSQL
 
 ---
 
-## 🐳 Docker Infrastructure
+## Docker Infrastructure
 
 The platform runs as **9 Docker services** on a single bridge network:
 
@@ -195,7 +174,7 @@ graph LR
 
 ---
 
-## ✅ Testing Strategy
+##  Testing Strategy
 
 The project includes **26 automated tests** across three test modules:
 
@@ -213,10 +192,12 @@ pytest tests/ -v
 
 ---
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 The GitHub Actions workflow runs automatically on every push/PR to `main`:
-```
+
+---
+
 | Job              | Steps                                                              |
 | ---------------- | ------------------------------------------------------------------ |
 | **Lint & Test**  | Checkout → Python 3.10 setup → Install deps → flake8 lint → pytest |
@@ -224,29 +205,7 @@ The GitHub Actions workflow runs automatically on every push/PR to `main`:
 
 ---
 
-## 🗄️ Data Flow Summary
-
-```
-   DATA GENERATOR                AIRFLOW                    SPARK                  WAREHOUSE
-  ┌──────────────┐          ┌──────────────────┐      ┌──────────────┐      ┌──────────────────┐
-  │   CSV files   │──local──▶│  DAG 1: Ingest   │      │  PySpark ETL │      │   PostgreSQL     │
-  │  (data/)      │          │  data/ → MinIO   │      │  - Hash PIIs │      │                  │
-  └──────────────┘          └────────┬─────────┘      │  - Timestamp │      │  flight_analytics│
-                                     │                 │  - Classify  │      │  .gold_flights   │
-                            ┌────────▼─────────┐      └───────┬──────┘      └────────┬─────────┘
-                            │  DAG 2: Validate  │             │                      │
-                            │  Pandera QA Gate  │─── PASS ───▶│──── JDBC Write ─────▶│
-                            │                   │             │                      │
-                            │  quarantine/ ◄────│─── FAIL                            ▼
-                            └──────────────────┘                             ┌──────────────────┐
-                                                                             │    Metabase       │
-                                                                             │   (Dashboards)   │
-                                                                             └──────────────────┘
-```
-
----
-
-## 📊 Sample Data Schema
+## Sample Data Schema
 
 | Column                  | Type   | Constraints       | Example               |
 | ----------------------- | ------ | ----------------- | --------------------- |
@@ -262,7 +221,7 @@ The GitHub Actions workflow runs automatically on every push/PR to `main`:
 
 ---
 
-## 🔐 Security Considerations
+## Security Considerations
 
 - **PII Hashing**: Transaction IDs are SHA-256 hashed before reaching the warehouse
 - **Schema Enforcement**: Pandera's `strict=True` mode rejects unexpected columns
@@ -271,7 +230,7 @@ The GitHub Actions workflow runs automatically on every push/PR to `main`:
 
 ---
 
-## 📝 Key Design Decisions
+## Key Design Decisions
 
 1. **Decoupled DAG Architecture** — Ingestion and processing are separate DAGs, enabling independent scheduling and failure isolation
 2. **Data Quality Gate Before Processing** — Pandera validation runs _before_ Spark, preventing bad data from ever reaching the warehouse
@@ -281,18 +240,7 @@ The GitHub Actions workflow runs automatically on every push/PR to `main`:
 
 ---
 
-## 📚 Additional Documentation
+##  Additional Documentation
 
 - **[User Guide](user_guide.md)** — Complete step-by-step commands for running the project from setup to teardown
 
----
-
-## 👤 Author
-
-**Jill** — Data Engineering Student
-
----
-
-## 📄 License
-
-This project is developed for educational purposes as part of the DEM12 module.
