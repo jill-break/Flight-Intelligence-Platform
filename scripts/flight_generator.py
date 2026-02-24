@@ -33,21 +33,23 @@ if __name__ == "__main__":
     import time
 
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 50
-    interval = int(sys.argv[2]) if len(sys.argv) > 2 else 30  # seconds
+    continuous = len(sys.argv) > 2  # only loop if interval is explicitly provided
+    interval = int(sys.argv[2]) if continuous else 30
     os.makedirs('data', exist_ok=True)
 
-    print(f"✈️  Flight Generator started — {count} records every {interval}s")
-    print(f"   Output: data/flights_*.csv")
-    print(f"   Press Ctrl+C to stop\n")
-
-    batch = 0
     CLEAN_COUNT = 10  # batches of clean data
     DIRTY_COUNT = 2   # batches of dirty data
     cycle_length = CLEAN_COUNT + DIRTY_COUNT  # 12 batches per cycle
 
+    if continuous:
+        print(f"✈️  Flight Generator started — {count} records every {interval}s")
+        print(f"   Output: data/flights_*.csv")
+        print(f"   Press Ctrl+C to stop\n")
+
+    batch = 0
     while True:
         batch += 1
-        position = batch % cycle_length  # 1-12, then repeats
+        position = batch % cycle_length
 
         # Batches 1-10 are clean, 11-12 are dirty
         inject_dirty = position > CLEAN_COUNT or position == 0
@@ -58,4 +60,7 @@ if __name__ == "__main__":
         df.to_csv(filename, index=False)
         dirty = len(df[df['fuel_level_percentage'] < 0])
         print(f"[Batch {batch}] [{label}] {len(df)} records ({dirty} dirty) -> {filename}")
+
+        if not continuous:
+            break  # single run for CI/CD
         time.sleep(interval)
