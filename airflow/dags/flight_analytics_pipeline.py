@@ -182,7 +182,7 @@ with DAG(
         conf={
             'spark.driver.host': 'airflow-scheduler',
             'spark.driver.bindAddress': '0.0.0.0',
-            'spark.hadoop.fs.s3a.endpoint': 'http://minio_storage:9000',
+            'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
             'spark.hadoop.fs.s3a.access.key': 'minio_admin',
             'spark.hadoop.fs.s3a.secret.key': 'minio_password_321',
             'spark.hadoop.fs.s3a.path.style.access': 'true',
