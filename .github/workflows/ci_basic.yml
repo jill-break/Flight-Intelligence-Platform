@@ -8,6 +8,9 @@ on:
         required: true
         default: '50'
 
+permissions:
+  contents: write
+
 jobs:
   generate-data:
     name: Run Flight Generator
