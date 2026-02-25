@@ -1,0 +1,89 @@
+name: Docker Integration Test
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Integration Test — Core Services Only
+  # Tests: Postgres, MinIO, Spark Master/Worker
+  # ─────────────────────────────────────────────
+  integration-test:
+    name: Docker Compose — Core Services
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@v4
+
+      # Create a minimal .env for docker-compose variable resolution
+      - name: Create test environment file
+        run: |
+          cat > .env <<EOF
+          POSTGRES_USER=testuser
+          POSTGRES_PASSWORD=testpassword
+          POSTGRES_DB=flight_analytics
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=minioadmin123
+          EOF
+
+      # Start only core infrastructure services (no Airflow for CI resource limits)
+      - name: Start core services
+        run: |
+          docker compose up -d \
+            postgres_analytics \
+            minio \
+            spark-master \
+            spark-worker
+
+      # Wait for services to become healthy
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+
+      # Health check — PostgreSQL
+      - name: Health check — PostgreSQL Analytics
+        run: |
+          docker exec postgres_analytics pg_isready -U testuser -d flight_analytics
+          echo "✅ PostgreSQL Analytics is healthy"
+
+      # Health check — MinIO
+      - name: Health check — MinIO Storage
+        run: |
+          curl -sf http://localhost:9000/minio/health/live
+          echo "✅ MinIO is healthy"
+
+      # Health check — Spark Master
+      - name: Health check — Spark Master
+        run: |
+          curl -sf http://localhost:8081/ > /dev/null
+          echo "✅ Spark Master UI is responsive"
+
+      # Verify Spark Worker registered
+      - name: Verify Spark Worker registration
+        run: |
+          # Give worker a moment to register with master
+          sleep 5
+          docker logs spark_worker 2>&1 | grep -i "registered" && \
+            echo "✅ Spark Worker registered with Master" || \
+            echo "⚠️  Worker registration not yet confirmed (may still be connecting)"
+
+      # Print service status summary
+      - name: Service status summary
+        if: always()
+        run: |
+          echo "═══════════════════════════════════════"
+          echo "       SERVICE STATUS SUMMARY"
+          echo "═══════════════════════════════════════"
+          docker compose ps
+          echo "═══════════════════════════════════════"
+
+      # Tear down all services
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans

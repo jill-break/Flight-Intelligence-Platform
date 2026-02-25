@@ -1,0 +1,116 @@
+name: Scheduled Data Quality Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Weekly Data Quality Report
+  # ─────────────────────────────────────────────
+  data-quality:
+    name: Data Quality Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate and validate data samples
+        run: |
+          python -c "
+          import sys, json
+          from datetime import datetime
+          sys.path.insert(0, '.')
+          from scripts.flight_generator import generate_flights
+          from spark.schemas.flight_schema import FlightSchema
+          import pandera
+
+          report = {
+              'timestamp': datetime.utcnow().isoformat(),
+              'tests': []
+          }
+
+          # Test 1: Clean data should pass validation
+          print('═' * 50)
+          print('TEST 1: Clean data validation')
+          print('═' * 50)
+          try:
+              clean_df = generate_flights(100)
+              FlightSchema.validate(clean_df, lazy=True)
+              result = '✅ PASSED'
+              report['tests'].append({'name': 'Clean data (100 records)', 'status': 'PASSED', 'records': 100})
+          except pandera.errors.SchemaErrors as e:
+              result = f'❌ FAILED — {len(e.failure_cases)} violations'
+              report['tests'].append({'name': 'Clean data (100 records)', 'status': 'FAILED', 'errors': len(e.failure_cases)})
+          print(f'  {result}')
+          print()
+
+          # Test 2: Verify data shape and completeness
+          print('═' * 50)
+          print('TEST 2: Data shape and completeness')
+          print('═' * 50)
+          expected_cols = ['transaction_id', 'flight_number', 'airline', 'origin',
+                           'destination', 'departure_time', 'passenger_count',
+                           'fuel_level_percentage', 'is_delayed']
+          missing = [c for c in expected_cols if c not in clean_df.columns]
+          if not missing:
+              print('  ✅ All 9 expected columns present')
+              report['tests'].append({'name': 'Column completeness', 'status': 'PASSED'})
+          else:
+              print(f'  ❌ Missing columns: {missing}')
+              report['tests'].append({'name': 'Column completeness', 'status': 'FAILED', 'missing': missing})
+
+          null_counts = clean_df.isnull().sum().to_dict()
+          has_nulls = {k: v for k, v in null_counts.items() if v > 0}
+          if not has_nulls:
+              print('  ✅ No null values detected')
+              report['tests'].append({'name': 'Null check', 'status': 'PASSED'})
+          else:
+              print(f'  ⚠️  Nulls found: {has_nulls}')
+              report['tests'].append({'name': 'Null check', 'status': 'WARNING', 'nulls': has_nulls})
+          print()
+
+          # Test 3: Uniqueness of transaction IDs
+          print('═' * 50)
+          print('TEST 3: Transaction ID uniqueness')
+          print('═' * 50)
+          duplicates = clean_df['transaction_id'].duplicated().sum()
+          if duplicates == 0:
+              print('  ✅ All transaction IDs are unique')
+              report['tests'].append({'name': 'Transaction ID uniqueness', 'status': 'PASSED'})
+          else:
+              print(f'  ❌ {duplicates} duplicate transaction IDs')
+              report['tests'].append({'name': 'Transaction ID uniqueness', 'status': 'FAILED', 'duplicates': int(duplicates)})
+          print()
+
+          # Summary
+          passed = sum(1 for t in report['tests'] if t['status'] == 'PASSED')
+          total = len(report['tests'])
+          report['summary'] = {'passed': passed, 'total': total}
+
+          print('═' * 50)
+          print(f'SUMMARY: {passed}/{total} checks passed')
+          print('═' * 50)
+
+          # Save JSON report
+          with open('data_quality_report.json', 'w') as f:
+              json.dump(report, f, indent=2)
+          "
+
+      - name: Upload data quality report
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-quality-report-${{ github.run_number }}
+          path: data_quality_report.json

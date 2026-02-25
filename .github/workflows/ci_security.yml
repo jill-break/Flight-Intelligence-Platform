@@ -1,0 +1,50 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Dependency Vulnerability Scan
+  # ─────────────────────────────────────────────
+  security-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies & pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-audit
+
+      - name: Run pip-audit
+        run: |
+          echo "═══════════════════════════════════════"
+          echo "    DEPENDENCY VULNERABILITY SCAN"
+          echo "═══════════════════════════════════════"
+          pip-audit --format=columns --desc || true
+
+      - name: Generate audit report
+        run: |
+          pip-audit --format=json --output=audit-report.json || true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: audit-report.json
