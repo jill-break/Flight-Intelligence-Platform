@@ -31,9 +31,7 @@ from spark.schemas.flight_schema import FlightSchema
 
 logger = logging.getLogger('flight_analytics_pipeline')
 
-# ──────────────────────────────────────────────
 # Default Args
-# ──────────────────────────────────────────────
 default_args = {
     'owner': 'senior_de',
     'depends_on_past': False,
@@ -48,9 +46,7 @@ MINIO_CONN_ID = 'minio_conn'
 BUCKET = 'raw-data'
 
 
-# ──────────────────────────────────────────────
 # Task: Data Quality Gate (Pandera)
-# ──────────────────────────────────────────────
 def validate_flight_data(**kwargs):
     """
     Validate all new CSVs against the Pandera FlightSchema.
@@ -118,9 +114,7 @@ def validate_flight_data(**kwargs):
     logger.info(f"All {len(validated_files)} file(s) passed validation — pipeline may proceed.")
 
 
-# ──────────────────────────────────────────────
 # Task: Automated Archive Cleanup
-# ──────────────────────────────────────────────
 def archive_processed_files(**kwargs):
     """
     Move files from validated/ to archived/{date}/ after Spark processes them.
@@ -152,9 +146,7 @@ def archive_processed_files(**kwargs):
     logger.info(f"Archived {archived_count} file(s) to archived/{today}/")
 
 
-# ──────────────────────────────────────────────
 # DAG Definition
-# ──────────────────────────────────────────────
 with DAG(
     'flight_analytics_pipeline',
     default_args=default_args,

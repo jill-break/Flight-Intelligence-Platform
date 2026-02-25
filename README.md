@@ -194,14 +194,29 @@ pytest tests/ -v
 
 ## CI/CD Pipeline
 
-The GitHub Actions workflow runs automatically on every push/PR to `main`:
+The project uses **two GitHub Actions workflows**:
 
----
+### `ci_cd.yml` — Continuous Integration & Docker Build
+
+Runs automatically on every push/PR to `main`:
 
 | Job              | Steps                                                              |
 | ---------------- | ------------------------------------------------------------------ |
 | **Lint & Test**  | Checkout → Python 3.10 setup → Install deps → flake8 lint → pytest |
 | **Docker Build** | Checkout → `docker build` to validate the image compiles           |
+
+### `ci_basic.yml` — Generate Flight Data
+
+A **manually-dispatched** workflow (`workflow_dispatch`) that generates synthetic flight records and commits them to the repository.
+
+| Step                       | Description                                                        |
+| -------------------------- | ------------------------------------------------------------------ |
+| **Checkout**               | Pulls the latest repo content                                      |
+| **Python Setup**           | Installs Python 3.11 with `pandas` and `numpy`                     |
+| **Generate Flight Data**   | Runs `scripts/flight_generator.py` with a configurable record count |
+| **Commit & Push**          | Auto-commits generated CSVs in `data/` back to the repository      |
+
+> **Usage:** Trigger from the GitHub Actions tab → select *Generate Flight Data* → enter the desired record count (default: 50).
 
 ---
 
