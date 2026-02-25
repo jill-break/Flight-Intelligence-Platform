@@ -63,7 +63,7 @@
 
 ---
 
-## Project Structure
+## Project Structure.
 
 ```
 Flight-Intelligence-Platform/
