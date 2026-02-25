@@ -1,4 +1,4 @@
-# ✈️ Flight Intelligence Platform
+#  Flight Intelligence Platform
 
 > **An end-to-end data engineering platform** that ingests synthetic flight data, validates it against strict quality contracts, transforms it with Apache Spark, and serves analytical insights through Metabase dashboards — all orchestrated by Apache Airflow inside a fully containerized Docker environment.
 
@@ -59,7 +59,7 @@
 | **Visualization**    | Metabase             | Business intelligence dashboards                             |
 | **Containerization** | Docker Compose       | Multi-service orchestration (9 services)                     |
 | **CI/CD**            | GitHub Actions       | Automated linting, testing, and Docker builds                |
-| **Data Generation**  | Python / Faker       | Synthetic flight data with configurable dirty-data injection |
+| **Data Generation**  | Python / Faker       | Synthetic flight data with configurable dirty-data injection. |
 
 ---
 
