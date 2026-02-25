@@ -33,7 +33,7 @@ jobs:
           import sys, json
           from datetime import datetime
           sys.path.insert(0, '.')
-          from scripts.flight_generator import generate_flights
+          from scripts.flight_generator import generate_flight_data
           from spark.schemas.flight_schema import FlightSchema
           import pandera
 
@@ -47,7 +47,7 @@ jobs:
           print('TEST 1: Clean data validation')
           print('═' * 50)
           try:
-              clean_df = generate_flights(100)
+              clean_df = generate_flight_data(100, inject_dirty=False)
               FlightSchema.validate(clean_df, lazy=True)
               result = '✅ PASSED'
               report['tests'].append({'name': 'Clean data (100 records)', 'status': 'PASSED', 'records': 100})

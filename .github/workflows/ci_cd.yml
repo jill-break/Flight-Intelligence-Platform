@@ -52,9 +52,9 @@ jobs:
         run: |
           python -c "
           import sys; sys.path.insert(0, '.')
-          from scripts.flight_generator import generate_flights
+          from scripts.flight_generator import generate_flight_data
           from spark.schemas.flight_schema import FlightSchema
-          df = generate_flights(20)
+          df = generate_flight_data(20, inject_dirty=False)
           FlightSchema.validate(df, lazy=True)
           print('Schema validation passed on 20 sample records')
           "
