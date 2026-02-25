@@ -110,7 +110,7 @@ jobs:
           "
 
       - name: Upload data quality report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: data-quality-report-${{ github.run_number }}
           path: data_quality_report.json
