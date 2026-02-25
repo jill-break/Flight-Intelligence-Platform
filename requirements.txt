@@ -1,0 +1,8 @@
+pandera
+pyspark==3.5.0
+psycopg2-binary
+pandas
+pytest
+numpy 
+apache-airflow-providers-amazon
+apache-airflow-providers-apache-spark

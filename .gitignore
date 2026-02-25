@@ -1,0 +1,27 @@
+# Secrets
+.env
+
+# Docker
+.docker/
+logs/*
+!logs/.gitkeep
+airflow/logs/
+
+# Data & Databases
+data/*
+!data/.gitkeep
+postgres_airflow_data/
+postgres_analytics_data/
+mysql_staging_data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+spark/__init__.py
+spark/schemas/__init__.py
+spark/jobs/__init__.py
+scripts/__init__.py
+airflow/__init__.py
+airflow/dags/__init__.py
+.pytest_cache
