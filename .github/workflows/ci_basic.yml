@@ -19,11 +19,11 @@ jobs:
     steps:
       # 1. Checkout repo content
       - name: Checkout repo content
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # 2. Set up Python environment
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
