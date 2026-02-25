@@ -29,6 +29,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: airflow_metadata
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d airflow_metadata" ]
       interval: 5s
@@ -38,12 +40,24 @@ services:
 
   # ─────────────────────────────────────────────
   # 2. AIRFLOW INIT (Runs once then exits)
+  #    - Migrates DB, creates admin user
+  #    - Auto-creates MinIO and Spark connections
   # ─────────────────────────────────────────────
   airflow-init:
     <<: *airflow-common
     container_name: airflow_init
+    env_file: .env
     command: >
-      bash -c "airflow db migrate &&  airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
+      bash -c "
+        airflow db migrate &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true &&
+        (airflow connections delete minio_conn 2>/dev/null || true) &&
+        airflow connections add minio_conn --conn-type aws --conn-extra '{\"endpoint_url\": \"http://minio:9000\", \"aws_access_key_id\": \"${MINIO_ROOT_USER}\", \"aws_secret_access_key\": \"${MINIO_ROOT_PASSWORD}\"}' &&
+        echo '✅ minio_conn connection created' &&
+        (airflow connections delete spark_default 2>/dev/null || true) &&
+        airflow connections add spark_default --conn-type spark --conn-host 'spark://spark-master' --conn-port 7077 &&
+        echo '✅ spark_default connection created'
+      "
     depends_on:
       postgres_airflow:
         condition: service_healthy
@@ -98,6 +112,35 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - data_platform_net
+
+  # ─────────────────────────────────────────────
+  # 5b. MinIO INIT (Creates buckets automatically)
+  # ─────────────────────────────────────────────
+  minio-init:
+    image: minio/mc
+    container_name: minio_init
+    env_file: .env
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        mc mb --ignore-existing myminio/raw-data &&
+        mc mb --ignore-existing myminio/validated &&
+        mc mb --ignore-existing myminio/quarantine &&
+        mc mb --ignore-existing myminio/archived &&
+        echo '✅ All MinIO buckets created successfully'
+      "
     networks:
       - data_platform_net
 
@@ -152,6 +195,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5433:5432"
+    volumes:
+      - postgres_analytics_data:/var/lib/postgresql/data
+      - ./init-analytics.sql:/docker-entrypoint-initdb.d/init-analytics.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
@@ -177,8 +223,20 @@ services:
       MB_DB_USER: ${POSTGRES_USER}
       MB_DB_PASS: ${POSTGRES_PASSWORD}
       MB_DB_HOST: postgres_analytics
+    volumes:
+      - metabase_data:/metabase-data
     networks:
       - data_platform_net
+
+# ─────────────────────────────────────────────
+# Named volumes — persist data across restarts
+# ─────────────────────────────────────────────
+volumes:
+  postgres_airflow_data: # Airflow metadata, users, connections
+  postgres_analytics_data: # Gold layer warehouse data
+  minio_data: # Object storage (raw, validated, archived)
+  metabase_data:
+    # Metabase setup, dashboards, questions
 
 networks:
   data_platform_net:

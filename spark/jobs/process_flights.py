@@ -53,6 +53,6 @@ db_properties = {
 }
 
 logger.info(f"Writing {record_count} records to PostgreSQL (flight_analytics.gold_flights)...")
-processed_df.write.jdbc(url=db_url, table="flight_analytics.gold_flights", mode="overwrite", properties=db_properties)
+processed_df.write.jdbc(url=db_url, table="flight_analytics.gold_flights", mode="append", properties=db_properties)
 
 logger.info("Transformation and Load to Postgres complete.")
