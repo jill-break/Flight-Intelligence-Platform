@@ -84,13 +84,21 @@ Flight-Intelligence-Platform/
 │   ├── test_flight_generator.py          # 10 tests: structure, quality, edge cases
 │   ├── test_flight_schema.py             # 8 tests: valid/invalid schema validation
 │   └── test_dag_integrity.py             # 6 tests: DAG structure (requires Airflow)
-├── .github/workflows/
-│   ├── ci_cd.yml                         # Full CI/CD: lint → test → Docker build
-│   └── ci_basic.yml                      # Lightweight CI pipeline
+├── .github/
+│   ├── workflows/
+│   │   ├── ci_cd.yml                     # Full CI/CD: lint → test → coverage → Docker build
+│   │   ├── ci_basic.yml                  # Manual flight data generation
+│   │   ├── ci_integration.yml            # Docker Compose integration test
+│   │   ├── ci_security.yml               # pip-audit vulnerability scanning
+│   │   ├── ci_docs.yml                   # Auto-generate API docs → GitHub Pages
+│   │   ├── ci_data_quality.yml           # Scheduled weekly data quality report
+│   │   └── release.yml                   # Tag-based release automation
+│   └── dependabot.yml                    # Automated dependency update PRs
 ├── docker-compose.yml                    # 9-service infrastructure definition
 ├── Dockerfile                            # Custom Airflow image with Java (for Spark)
 ├── requirements.txt                      # Python dependencies
 ├── user_guide.md                         # Step-by-step operational guide
+├── CONTRIBUTING.md                       # Development workflow & branch protection
 └── .env                                  # Environment variables (credentials, config)
 ```
 
@@ -194,29 +202,21 @@ pytest tests/ -v
 
 ## CI/CD Pipeline
 
-The project uses **two GitHub Actions workflows**:
+The project uses **7 GitHub Actions workflows** for automated quality assurance, security, and operations:
 
-### `ci_cd.yml` — Continuous Integration & Docker Build
+| Workflow | Trigger | Purpose |
+|----------|---------|--------|
+| `ci_cd.yml` | Push/PR to `main` | Lint (flake8) → Schema validation → Test with coverage (Python 3.10 & 3.11) → Docker build |
+| `ci_basic.yml` | Manual dispatch | Generate synthetic flight data and commit to repo |
+| `ci_integration.yml` | Push to `main` | Docker Compose health check for core services (Postgres, MinIO, Spark) |
+| `ci_security.yml` | Push/PR to `main` | `pip-audit` dependency vulnerability scan |
+| `ci_docs.yml` | Push to `main` | Auto-generate API documentation with `pdoc` → deploy to GitHub Pages |
+| `ci_data_quality.yml` | Weekly (Mon 9AM UTC) | Scheduled data quality report with schema validation |
+| `release.yml` | Tag push (`v*`) | Auto-generate changelog and create GitHub Release |
 
-Runs automatically on every push/PR to `main`:
+**Dependabot** is also configured to automatically create PRs for vulnerable Python dependencies and outdated GitHub Actions versions on a weekly schedule.
 
-| Job              | Steps                                                              |
-| ---------------- | ------------------------------------------------------------------ |
-| **Lint & Test**  | Checkout → Python 3.10 setup → Install deps → flake8 lint → pytest |
-| **Docker Build** | Checkout → `docker build` to validate the image compiles           |
-
-### `ci_basic.yml` — Generate Flight Data
-
-A **manually-dispatched** workflow (`workflow_dispatch`) that generates synthetic flight records and commits them to the repository.
-
-| Step                       | Description                                                        |
-| -------------------------- | ------------------------------------------------------------------ |
-| **Checkout**               | Pulls the latest repo content                                      |
-| **Python Setup**           | Installs Python 3.11 with `pandas` and `numpy`                     |
-| **Generate Flight Data**   | Runs `scripts/flight_generator.py` with a configurable record count |
-| **Commit & Push**          | Auto-commits generated CSVs in `data/` back to the repository      |
-
-> **Usage:** Trigger from the GitHub Actions tab → select *Generate Flight Data* → enter the desired record count (default: 50).
+For development workflow and branch protection rules, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ---
 
