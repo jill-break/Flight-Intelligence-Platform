@@ -43,7 +43,7 @@
 ---
 
 ### System Architecture
-![System Architecture](screenshots/System_architecture.png)
+![System Architecture](screenshots/system_architecture.png)
 
 ---
 
