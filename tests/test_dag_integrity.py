@@ -16,6 +16,7 @@ import os
 DAG_DIR = os.path.join(os.path.dirname(__file__), '..', 'airflow', 'dags')
 RAW_INGESTION_PATH = os.path.join(DAG_DIR, 'raw_ingestion_dag.py')
 ANALYTICS_PIPELINE_PATH = os.path.join(DAG_DIR, 'flight_analytics_pipeline.py')
+QUARANTINE_CLEANER_PATH = os.path.join(DAG_DIR, 'quarantine_cleaner.py')
 
 
 def _read_file(path):
@@ -55,8 +56,12 @@ class TestDAGIntegrity:
         expected_tasks = [
             'wait_for_flight_data',
             'validate_with_pandera',
-            'process_flight_data_spark',
-            'archive_processed_files',
+            'process_clean_data_spark',
+            'archive_clean_files',
+            'clean_quarantined_data',
+            'track_dropped_rows',
+            'process_recovered_data_spark',
+            'archive_recovered_files',
         ]
         for task_id in expected_tasks:
             assert f"'{task_id}'" in source or f'"{task_id}"' in source, \
@@ -66,6 +71,12 @@ class TestDAGIntegrity:
         """Verify the >> dependency chain exists in the analytics DAG."""
         source = _read_file(ANALYTICS_PIPELINE_PATH)
         assert '>>' in source, "No >> dependency chain found in analytics DAG"
+
+    def test_quarantine_cleaner_parses(self):
+        """quarantine_cleaner.py should be valid Python."""
+        source = _read_file(QUARANTINE_CLEANER_PATH)
+        tree = ast.parse(source)
+        assert tree is not None
 
     def test_no_syntax_errors_all_dags(self):
         """Every .py file in the dags folder should parse as valid Python."""
