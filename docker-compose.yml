@@ -139,6 +139,7 @@ services:
         mc mb --ignore-existing myminio/validated &&
         mc mb --ignore-existing myminio/quarantine &&
         mc mb --ignore-existing myminio/archived &&
+        mc mb --ignore-existing myminio/dropped-rows &&
         echo '✅ All MinIO buckets created successfully'
       "
     networks:
