@@ -25,9 +25,15 @@ spark = SparkSession.builder \
     .getOrCreate()
 logger.info("Spark session initialized successfully.")
 
-# 1. READ: Pull validated data from MinIO
-logger.info("Reading validated flight data from MinIO (s3a://raw-data/validated/*.csv)...")
-df = spark.read.csv("s3a://raw-data/validated/*.csv", header=True, inferSchema=True)
+import sys
+
+# 1. READ: Pull validated data from MinIO (dynamic path)
+input_path = "s3a://raw-data/validated/*.csv"
+if len(sys.argv) > 1:
+    input_path = sys.argv[1]
+
+logger.info(f"Reading validated flight data from MinIO ({input_path})...")
+df = spark.read.csv(input_path, header=True, inferSchema=True)
 record_count = df.count()
 logger.info(f"Loaded {record_count} records from MinIO.")
 

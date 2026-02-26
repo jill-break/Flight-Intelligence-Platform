@@ -6,3 +6,4 @@ pytest
 numpy 
 apache-airflow-providers-amazon
 apache-airflow-providers-apache-spark
+pytest-cov
