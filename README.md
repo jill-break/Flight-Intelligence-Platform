@@ -70,7 +70,8 @@ Flight-Intelligence-Platform/
 ├── airflow/
 │   └── dags/
 │       ├── raw_ingestion_dag.py          # DAG 1: Local files → MinIO
-│       └── flight_analytics_pipeline.py  # DAG 2: MinIO → Validate → Spark → Postgres
+│       ├── flight_analytics_pipeline.py  # DAG 2: MinIO → Validate → Clean → Spark → Postgres
+│       └── quarantine_cleaner.py         # 11-step pure python logic for recovering quarantined data
 ├── spark/
 │   ├── jobs/
 │   │   └── process_flights.py            # PySpark ETL: transform & load to warehouse
@@ -83,7 +84,8 @@ Flight-Intelligence-Platform/
 ├── tests/
 │   ├── test_flight_generator.py          # 10 tests: structure, quality, edge cases
 │   ├── test_flight_schema.py             # 8 tests: valid/invalid schema validation
-│   └── test_dag_integrity.py             # 6 tests: DAG structure (requires Airflow)
+│   ├── test_quarantine_cleaner.py        # 21 tests: numeric clamping, UUID validation, etc.
+│   └── test_dag_integrity.py             # 7 tests: DAG structure (requires Airflow)
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci_cd.yml                     # Full CI/CD: lint → test → coverage → Docker build
@@ -123,30 +125,37 @@ wait_for_local_file → upload_files_to_minio
 
 ---
 
-### DAG 2 — Flight Analytics Pipeline
+### DAG 2 — Flight Analytics Pipeline (Parallel Processing)
 
-**Purpose:** Validate, transform, and load data into the analytics warehouse.
+**Purpose:** Validate, rescue dirty data, transform, and load into the analytics warehouse.
 
 ```
-wait_for_flight_data → validate_with_pandera → process_flight_data_spark → archive_processed_files
+wait_for_flight_data → validate_with_pandera ─┬─→ process_clean_data_spark ─────→ archive_clean_files
+                                              │
+                                              └─→ clean_quarantined_data ─┬─→ track_dropped_rows
+                                                                          │
+                                                                          └─→ process_recovered_data_spark ─→ archive_recovered_files
 ```
 
-| Task                        | Operator              | Description                                                             |
-| --------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| `wait_for_flight_data`      | `S3KeySensor`         | Waits for CSV files to appear in MinIO `raw-data` bucket                |
-| `validate_with_pandera`     | `PythonOperator`      | Validates every CSV against `FlightSchema`; quarantines bad files       |
-| `process_flight_data_spark` | `SparkSubmitOperator` | Submits PySpark job to Spark cluster for transformation & Postgres load |
-| `archive_processed_files`   | `PythonOperator`      | Moves processed files from `raw-data/` to `archived/` in MinIO          |
+| Task | Operator | Description |
+| --- | --- | --- |
+| `wait_for_flight_data` | `S3KeySensor` | Waits for CSV files to appear in MinIO `raw-data` bucket |
+| `validate_with_pandera` | `BranchPythonOperator` | Validates every CSV against `FlightSchema`; branches to clean and/or quarantine processing |
+| `process_clean_data_spark` | `SparkSubmitOperator` | Parallel Spark job processing 100% clean data completely independently |
+| `clean_quarantined_data` | `PythonOperator` | Applies 11-step fix (whitespace stripping, clamping) to quarantine files |
+| `track_dropped_rows` | `PythonOperator` | Logs unrecoverable rows to MinIO `dropped-rows/` and Postgres `quarantine_log` |
+| `process_recovered_data_spark` | `SparkSubmitOperator` | Parallel Spark job processing data that has been recovered from quarantine |
+| `archive_*_files` | `PythonOperator` | Moves processed files to `archived/` (independent archiving for clean/recovered) |
 
 ---
 
+**Validation & Quarantine behavior:**
 
-**Validation behavior:**
-
-- Uses `lazy=True` for comprehensive error reporting (all violations, not just the first)
-- Clean files → moved to `validated/` prefix in MinIO
-- Bad files → quarantined to `quarantine/` prefix with error log
-- If **any** file fails → DAG fails, Spark never runs
+- Uses `lazy=True` for comprehensive error reporting (all violations are caught)
+- Valid files are immediately routed to `validated/clean/` for fast-track Spark processing.
+- If **any** row in a file fails, the **entire file** is routed to `quarantine/`.
+- The quarantine cleaner attempts data recovery (re-typing, clamping, whitespace trimming).
+- Recovered rows hit a second parallel Spark job via `validated/recovered/`, ensuring clean data is never blocked by dirty data.
 
 ---
 
@@ -184,13 +193,14 @@ graph LR
 
 ##  Testing Strategy
 
-The project includes **26 automated tests** across three test modules:
+The project includes **46 automated tests** across four test modules achieving high test coverage:
 
 | Test File                  | Tests | Scope                                                                                         |
 | -------------------------- | ----- | --------------------------------------------------------------------------------------------- |
 | `test_flight_generator.py` | 10    | Data structure, column presence, value ranges, dirty-data injection, uniqueness               |
 | `test_flight_schema.py`    | 8     | Valid data passes, negative fuel fails, passengers out-of-range, missing columns, bad formats |
-| `test_dag_integrity.py`    | 6     | DAG loading, task presence, dependency chains (auto-skipped without Airflow)                  |
+| `test_quarantine_cleaner.py`| 21   | Quarantine fixes (clamping, UUIDs, logical inconsistencies, nulls, whitespace, dropping)      |
+| `test_dag_integrity.py`    | 7     | DAG loading, task presence, valid python parsing (auto-skipped without Airflow)               |
 
 Run tests:
 
