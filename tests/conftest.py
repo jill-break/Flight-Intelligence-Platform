@@ -81,9 +81,7 @@ def sample_csv_path(valid_flight_df):
     os.unlink(path)
 
 
-# ──────────────────────────────────────────────
 # Quarantine Cleaner Fixtures
-# ──────────────────────────────────────────────
 
 @pytest.fixture
 def dirty_flight_df():

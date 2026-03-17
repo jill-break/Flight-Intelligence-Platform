@@ -40,7 +40,7 @@ default_args = {
     'owner': 'senior_de',
     'depends_on_past': False,
     'start_date': datetime(2026, 1, 1),
-    'retries': 1,
+    'retries': 3,
     'retry_delay': timedelta(minutes=5),
     'email_on_failure': True,
     'email': ['data-team@flightintel.io'],
@@ -50,9 +50,7 @@ MINIO_CONN_ID = 'minio_conn'
 BUCKET = 'raw-data'
 
 
-# ──────────────────────────────────────────────
 # Task: Data Quality Gate (Pandera) + Branch
-# ──────────────────────────────────────────────
 def validate_flight_data(**kwargs):
     """
     Validate all new CSVs against the Pandera FlightSchema.
@@ -126,9 +124,7 @@ def validate_flight_data(**kwargs):
     return 'process_clean_data_spark'
 
 
-# ──────────────────────────────────────────────
 # Task: Clean Quarantined Data
-# ──────────────────────────────────────────────
 def clean_quarantined_data(**kwargs):
     """
     Read quarantined files from MinIO, apply cleaning rules,
@@ -201,9 +197,7 @@ def clean_quarantined_data(**kwargs):
     logger.info(f"Quarantine cleaning complete: {total_recovered} rows recovered")
 
 
-# ──────────────────────────────────────────────
 # Task: Track Dropped Rows
-# ──────────────────────────────────────────────
 def track_dropped_rows(**kwargs):
     """
     Write dropped rows to the dropped-rows bucket in MinIO.
@@ -243,9 +237,7 @@ def track_dropped_rows(**kwargs):
     logger.info(f"Dropped row tracking complete: {len(report)} total rows tracked")
 
 
-# ──────────────────────────────────────────────
 # Task: Automated Archive Cleanup
-# ──────────────────────────────────────────────
 def archive_processed_files(**kwargs):
     """
     Move files from a validated prefix to archived/{date}/ after Spark processes them.
@@ -279,9 +271,7 @@ def archive_processed_files(**kwargs):
     logger.info(f"Archived {archived_count} file(s) to archived/{today}/")
 
 
-# ══════════════════════════════════════════════
 # DAG Definition
-# ══════════════════════════════════════════════
 with DAG(
     'flight_analytics_pipeline',
     default_args=default_args,
@@ -374,7 +364,7 @@ with DAG(
         op_kwargs={'prefix': 'validated/recovered/'},
     )
 
-    # ── Pipeline Flow ──────────────────────────────
+    #  Pipeline Flow 
     # Main path: wait -> validate -> [branch]
     wait_for_file >> validate_data
 

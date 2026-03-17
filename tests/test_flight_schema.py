@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from spark.schemas.flight_schema import FlightSchema
 
 
-# ---------- Positive Tests ----------
+# Positive Tests
 
 class TestFlightSchemaValid:
     """Verify that well-formed data passes validation."""
@@ -22,7 +22,7 @@ class TestFlightSchemaValid:
         assert len(validated) == len(valid_flight_df)
 
 
-# ---------- Negative Tests ----------
+# Negative Tests
 
 class TestFlightSchemaInvalid:
     """Verify that bad data correctly raises SchemaError."""

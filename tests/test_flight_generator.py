@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from scripts.flight_generator import generate_flight_data
 
 
-# ---------- Structure Tests ----------
+# Structure Tests
 
 class TestGenerateFlightDataStructure:
     """Verify the shape and column layout of generated data."""
@@ -37,7 +37,7 @@ class TestGenerateFlightDataStructure:
         assert list(df.columns) == expected
 
 
-# ---------- Data Quality Tests ----------
+# Data Quality Tests
 
 class TestGenerateFlightDataQuality:
     """Verify the content and constraints of generated data."""

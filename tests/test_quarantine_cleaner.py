@@ -23,11 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'airflow', 'dag
 
 from quarantine_cleaner import clean_dataframe, build_dropped_rows_report
 
-
-# ──────────────────────────────────────────────
 # Numeric Clamping Tests
-# ──────────────────────────────────────────────
-
 class TestNumericClamping:
     """Verify that out-of-range numeric values are clamped, not dropped."""
 
@@ -58,11 +54,7 @@ class TestNumericClamping:
         assert (cleaned['passenger_count'] <= 850).all()
         assert cleaned.loc[cleaned.index[0], 'passenger_count'] == 850
 
-
-# ──────────────────────────────────────────────
 # Whitespace Stripping Tests
-# ──────────────────────────────────────────────
-
 class TestWhitespaceStripping:
     """Verify whitespace is stripped from string columns."""
 
@@ -74,11 +66,7 @@ class TestWhitespaceStripping:
         assert cleaned.loc[cleaned.index[0], 'origin'] == 'ACC'
         assert cleaned.loc[cleaned.index[0], 'airline'] == 'Ghana Airways'
 
-
-# ──────────────────────────────────────────────
 # Transaction ID Validation Tests
-# ──────────────────────────────────────────────
-
 class TestTransactionIdValidation:
     """Verify invalid transaction IDs are dropped and tracked."""
 
@@ -102,11 +90,7 @@ class TestTransactionIdValidation:
         assert len(cleaned) < len(df)
         assert any('invalid_transaction_id' in str(r) for r in dropped['drop_reason'].values)
 
-
-# ──────────────────────────────────────────────
 # Logical Inconsistency Tests
-# ──────────────────────────────────────────────
-
 class TestLogicalInconsistencies:
     """Verify rows with origin == destination are dropped."""
 
@@ -120,11 +104,7 @@ class TestLogicalInconsistencies:
         ]
         assert len(same_route_drops) >= 2
 
-
-# ──────────────────────────────────────────────
 # Duplicate Transaction ID Tests
-# ──────────────────────────────────────────────
-
 class TestDeduplication:
     """Verify duplicate transaction IDs are deduplicated (keep first)."""
 
@@ -137,11 +117,7 @@ class TestDeduplication:
         ]
         assert len(dup_drops) >= 1
 
-
-# ──────────────────────────────────────────────
 # Flight Number Validation Tests
-# ──────────────────────────────────────────────
-
 class TestFlightNumberValidation:
     """Verify invalid flight numbers are dropped."""
 
@@ -154,11 +130,7 @@ class TestFlightNumberValidation:
         ]
         assert len(fn_drops) >= 1
 
-
-# ──────────────────────────────────────────────
 # Airport Code Validation Tests
-# ──────────────────────────────────────────────
-
 class TestAirportCodeValidation:
     """Verify invalid airport codes (not 3 chars) are dropped."""
 
@@ -172,11 +144,7 @@ class TestAirportCodeValidation:
         ]
         assert len(code_drops) >= 1
 
-
-# ──────────────────────────────────────────────
 # Null Value Tests
-# ──────────────────────────────────────────────
-
 class TestNullValues:
     """Verify rows with nulls in required columns are dropped."""
 
@@ -190,11 +158,7 @@ class TestNullValues:
         ]
         assert len(null_drops) >= 1
 
-
-# ──────────────────────────────────────────────
 # Dropped Rows Report Format Tests
-# ──────────────────────────────────────────────
-
 class TestDroppedRowsReport:
     """Verify the dropped-rows output has the correct format."""
 
@@ -224,11 +188,7 @@ class TestDroppedRowsReport:
         assert list(report.columns) == ['source_filename', 'transaction_id', 'drop_reason']
         assert len(report) == 0
 
-
-# ──────────────────────────────────────────────
 # Type Mismatch Tests
-# ──────────────────────────────────────────────
-
 class TestTypeMismatches:
     """Verify type mismatches in numeric columns are dropped."""
 
