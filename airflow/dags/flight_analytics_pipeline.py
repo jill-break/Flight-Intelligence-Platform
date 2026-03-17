@@ -29,6 +29,7 @@ import pandera
 import io
 import json
 import logging
+import os
 
 from spark.schemas.flight_schema import FlightSchema
 from quarantine_cleaner import clean_dataframe, build_dropped_rows_report
@@ -309,8 +310,8 @@ with DAG(
             'spark.driver.host': 'airflow-scheduler',
             'spark.driver.bindAddress': '0.0.0.0',
             'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
-            'spark.hadoop.fs.s3a.access.key': 'minio_admin',
-            'spark.hadoop.fs.s3a.secret.key': 'minio_password_321',
+            'spark.hadoop.fs.s3a.access.key': os.environ['AWS_ACCESS_KEY_ID'],
+            'spark.hadoop.fs.s3a.secret.key': os.environ['AWS_SECRET_ACCESS_KEY'],
             'spark.hadoop.fs.s3a.path.style.access': 'true',
             'spark.hadoop.fs.s3a.impl': 'org.apache.hadoop.fs.s3a.S3AFileSystem',
         },
@@ -348,8 +349,8 @@ with DAG(
             'spark.driver.host': 'airflow-scheduler',
             'spark.driver.bindAddress': '0.0.0.0',
             'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
-            'spark.hadoop.fs.s3a.access.key': 'minio_admin',
-            'spark.hadoop.fs.s3a.secret.key': 'minio_password_321',
+            'spark.hadoop.fs.s3a.access.key': os.environ['AWS_ACCESS_KEY_ID'],
+            'spark.hadoop.fs.s3a.secret.key': os.environ['AWS_SECRET_ACCESS_KEY'],
             'spark.hadoop.fs.s3a.path.style.access': 'true',
             'spark.hadoop.fs.s3a.impl': 'org.apache.hadoop.fs.s3a.S3AFileSystem',
         },

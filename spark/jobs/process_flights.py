@@ -53,8 +53,8 @@ logger.info(f"Transformation complete: {priority_count} HIGH priority flights id
 # Write to the dedicated analytics DB, not the Airflow metadata DB
 db_url = "jdbc:postgresql://postgres_analytics:5432/retail_db"
 db_properties = {
-    "user": os.getenv("POSTGRES_USER", "warehouse_admin"),
-    "password": os.getenv("POSTGRES_PASSWORD", "secure_password_789"),
+    "user": os.environ["POSTGRES_USER"],
+    "password": os.environ["POSTGRES_PASSWORD"],
     "driver": "org.postgresql.Driver"
 }
 

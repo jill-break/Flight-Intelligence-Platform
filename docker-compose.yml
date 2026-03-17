@@ -50,7 +50,7 @@ services:
     command: >
       bash -c "
         airflow db migrate &&
-        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password $${AIRFLOW_ADMIN_PASSWORD} || true &&
         (airflow connections delete minio_conn 2>/dev/null || true) &&
         airflow connections add minio_conn --conn-type aws --conn-extra '{\"endpoint_url\": \"http://minio:9000\", \"aws_access_key_id\": \"${MINIO_ROOT_USER}\", \"aws_secret_access_key\": \"${MINIO_ROOT_PASSWORD}\"}' &&
         echo '✅ minio_conn connection created' &&
@@ -152,6 +152,7 @@ services:
     image: apache/spark:3.5.0
     container_name: spark_master
     user: root
+    env_file: .env
     ports:
       - "8081:8080"
       - "7077:7077"
@@ -170,6 +171,7 @@ services:
     image: apache/spark:3.5.0
     container_name: spark_worker
     user: root
+    env_file: .env
     environment:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_CORES=1
