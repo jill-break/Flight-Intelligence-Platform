@@ -224,6 +224,8 @@ The project uses **7 GitHub Actions workflows** for automated quality assurance,
 | `ci_data_quality.yml` | Weekly (Mon 9AM UTC) | Scheduled data quality report with schema validation |
 | `release.yml` | Tag push (`v*`) | Auto-generate changelog and create GitHub Release |
 
+> **Note:** To optimize CI resource usage, workflows triggered by pushes or pull requests (`ci_cd.yml`, `ci_integration.yml`, `ci_docs.yml`) are configured with `paths-ignore` to skip execution if changes only affect non-code files (such as Markdown documentation, `docs/`, `LICENSE`, or `.gitignore`).
+
 **Dependabot** is also configured to automatically create PRs for vulnerable Python dependencies and outdated GitHub Actions versions on a weekly schedule.
 
 For development workflow and branch protection rules, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
