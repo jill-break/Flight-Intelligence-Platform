@@ -18,3 +18,5 @@ CREATE TABLE IF NOT EXISTS flight_analytics.quarantine_log (
 );
 
 GRANT ALL ON TABLE flight_analytics.quarantine_log TO PUBLIC;
+
+

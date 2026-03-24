@@ -7,10 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─────────────────────────────────────────────
   # Integration Test — Core Services Only
   # Tests: Postgres, MinIO, Spark Master/Worker
-  # ─────────────────────────────────────────────
   integration-test:
     name: Docker Compose — Core Services
     runs-on: ubuntu-latest
@@ -49,19 +47,19 @@ jobs:
       - name: Health check — PostgreSQL Analytics
         run: |
           docker exec postgres_analytics pg_isready -U testuser -d flight_analytics
-          echo "✅ PostgreSQL Analytics is healthy"
+          echo " PostgreSQL Analytics is healthy"
 
       # Health check — MinIO
       - name: Health check — MinIO Storage
         run: |
           curl -sf http://localhost:9000/minio/health/live
-          echo "✅ MinIO is healthy"
+          echo " MinIO is healthy"
 
       # Health check — Spark Master
       - name: Health check — Spark Master
         run: |
           curl -sf http://localhost:8081/ > /dev/null
-          echo "✅ Spark Master UI is responsive"
+          echo " Spark Master UI is responsive"
 
       # Verify Spark Worker registered
       - name: Verify Spark Worker registration
@@ -69,8 +67,8 @@ jobs:
           # Give worker a moment to register with master
           sleep 5
           docker logs spark_worker 2>&1 | grep -i "registered" && \
-            echo "✅ Spark Worker registered with Master" || \
-            echo "⚠️  Worker registration not yet confirmed (may still be connecting)"
+            echo " Spark Worker registered with Master" || \
+            echo "  Worker registration not yet confirmed (may still be connecting)"
 
       # Print service status summary
       - name: Service status summary

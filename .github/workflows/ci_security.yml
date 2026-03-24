@@ -10,9 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─────────────────────────────────────────────
   # Dependency Vulnerability Scan
-  # ─────────────────────────────────────────────
   security-scan:
     name: Dependency Audit
     runs-on: ubuntu-latest

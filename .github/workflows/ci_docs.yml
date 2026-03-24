@@ -18,9 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ─────────────────────────────────────────────
   # Build & Deploy API Documentation
-  # ─────────────────────────────────────────────
   build-docs:
     name: Build & Deploy Docs
     runs-on: ubuntu-latest

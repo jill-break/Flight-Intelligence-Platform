@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ─────────────────────────────────────────────
   # Weekly Data Quality Report
-  # ─────────────────────────────────────────────
   data-quality:
     name: Data Quality Report
     runs-on: ubuntu-latest
@@ -49,10 +47,10 @@ jobs:
           try:
               clean_df = generate_flight_data(100, inject_dirty=False)
               FlightSchema.validate(clean_df, lazy=True)
-              result = '✅ PASSED'
+              result = ' PASSED'
               report['tests'].append({'name': 'Clean data (100 records)', 'status': 'PASSED', 'records': 100})
           except pandera.errors.SchemaErrors as e:
-              result = f'❌ FAILED — {len(e.failure_cases)} violations'
+              result = f' FAILED — {len(e.failure_cases)} violations'
               report['tests'].append({'name': 'Clean data (100 records)', 'status': 'FAILED', 'errors': len(e.failure_cases)})
           print(f'  {result}')
           print()
@@ -66,19 +64,19 @@ jobs:
                            'fuel_level_percentage', 'is_delayed']
           missing = [c for c in expected_cols if c not in clean_df.columns]
           if not missing:
-              print('  ✅ All 9 expected columns present')
+              print('   All 9 expected columns present')
               report['tests'].append({'name': 'Column completeness', 'status': 'PASSED'})
           else:
-              print(f'  ❌ Missing columns: {missing}')
+              print(f'   Missing columns: {missing}')
               report['tests'].append({'name': 'Column completeness', 'status': 'FAILED', 'missing': missing})
 
           null_counts = clean_df.isnull().sum().to_dict()
           has_nulls = {k: v for k, v in null_counts.items() if v > 0}
           if not has_nulls:
-              print('  ✅ No null values detected')
+              print('  No null values detected')
               report['tests'].append({'name': 'Null check', 'status': 'PASSED'})
           else:
-              print(f'  ⚠️  Nulls found: {has_nulls}')
+              print(f'  Nulls found: {has_nulls}')
               report['tests'].append({'name': 'Null check', 'status': 'WARNING', 'nulls': has_nulls})
           print()
 
@@ -88,10 +86,10 @@ jobs:
           print('═' * 50)
           duplicates = clean_df['transaction_id'].duplicated().sum()
           if duplicates == 0:
-              print('  ✅ All transaction IDs are unique')
+              print('   All transaction IDs are unique')
               report['tests'].append({'name': 'Transaction ID uniqueness', 'status': 'PASSED'})
           else:
-              print(f'  ❌ {duplicates} duplicate transaction IDs')
+              print(f'   {duplicates} duplicate transaction IDs')
               report['tests'].append({'name': 'Transaction ID uniqueness', 'status': 'FAILED', 'duplicates': int(duplicates)})
           print()
 
